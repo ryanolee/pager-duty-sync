@@ -1,0 +1,3 @@
+#Pager duty libs
+boto3
+dotenv

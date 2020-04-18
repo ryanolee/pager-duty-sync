@@ -1,0 +1,28 @@
+service: pager-duty-sync
+
+provider:
+  name: aws
+  runtime: python3.8
+
+functions:
+  exportToS3:
+    handler: functions.export_pager_duty_reports_to_s3
+    events:
+     - http: POST /sync/s3
+
+plugins:
+  - serverless-offline
+  - serverless-s3-local
+  - serverless-dotenv-plugin
+
+custom:
+  s3:
+    port: ${env:LOCAL_S3_PORT}
+    directory: ${env:LOCAL_S3_DIR}
+
+resources:
+ Resources:
+   NewResource:
+     Type: AWS::S3::Bucket
+     Properties:
+       BucketName: ${env:AWS_S3_BUCKET_NAME}
