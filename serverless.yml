@@ -18,7 +18,12 @@ plugins:
   - serverless-offline
   - serverless-s3-local
   - serverless-dotenv-plugin
+  - serverless-python-requirements
   
+package:
+  exclude:
+    - node_modules/**
+    - node_modules
 
 custom:
   s3:
