@@ -12,10 +12,12 @@ def getS3Client():
     }
 
     env = os.getenv("ENV", 'prod') 
+    
     if env == 'prod':
-        pass
-        #  aws_access_key_id='aaa',
-        #  aws_secret_access_key='bbb',
+        config["aws_access_key_id"]=os.getenv("AWS_S3_USER_ACCESS_KEY_ID")
+        config["aws_secret_access_key"]=os.getenv("AWS_S3_USER_SECRET")
+        config["region_name"]=os.getenv("AWS_S3_USER_REGION")
+
     else:
         # In the event we are in dev mode try to connect to the local instance
         config["endpoint_url"] = "http://localhost:{port}".format(port=os.getenv("LOCAL_S3_PORT",4569)) 

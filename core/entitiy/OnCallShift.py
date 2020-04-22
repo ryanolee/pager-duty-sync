@@ -17,8 +17,9 @@ class OnCallShift:
         return {
             "id": self.id,
             "name": self.name,
-            "start_date": self.start_date,
-            "end_date": self.end_date,
+            #Convert date times to unix format for athena support
+            "start_date": parser.isoparse(self.start_date).strftime("%Y-%m-%d %H:%M:%S"),
+            "end_date": parser.isoparse(self.end_date).strftime("%Y-%m-%d %H:%M:%S"),
             "is_chargeable": self.is_chargeable
         }
 

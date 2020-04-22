@@ -3,6 +3,9 @@ service: pager-duty-sync
 provider:
   name: aws
   runtime: python3.8
+  stage: ${env:AWS_STAGE}
+  region:  ${env:AWS_REGION}
+  profile: ${env:AWS_DEPLOY_PROFILE}
 
 functions:
   exportToS3:
@@ -24,23 +27,30 @@ package:
   exclude:
     - node_modules/**
     - node_modules
+    - .env
 
 custom:
   s3:
     port: ${env:LOCAL_S3_PORT}
     directory: ${env:LOCAL_S3_DIR}
   
-  custom:
-    # Add custom dotenv includes
-    dotenv:
+
+  # Add custom dotenv includes
+  dotenv:
+    logging: false
+    include:
       # Include S3 creds for bucket
       - AWS_S3_USER_SECRET
       - AWS_S3_USER_ACCESS_KEY_ID
       - AWS_S3_BUCKET_NAME
+      - AWS_S3_USER_REGION
       
       # Include pagerduty creds
       - PAGER_DUTY_API_TOKEN
       - PAGER_DUTY_SCHEDULE_ID
+  
+  pythonRequirements:
+    dockerizePip: true
 
 resources:
  Resources:
