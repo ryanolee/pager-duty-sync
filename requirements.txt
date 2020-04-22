@@ -1,3 +1,6 @@
 #Pager duty libs
 boto3
 dotenv
+gspread
+python-dateutil
+pytz

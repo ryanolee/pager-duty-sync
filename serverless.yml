@@ -8,17 +8,34 @@ functions:
   exportToS3:
     handler: functions.export_pager_duty_reports_to_s3
     events:
-     - http: POST /sync/s3
+     #- http: POST /sync/s3
+      - 
+        schedule: 
+          enabled: true
+          rate: cron(0 0 * * ? *)
 
 plugins:
   - serverless-offline
   - serverless-s3-local
   - serverless-dotenv-plugin
+  
 
 custom:
   s3:
     port: ${env:LOCAL_S3_PORT}
     directory: ${env:LOCAL_S3_DIR}
+  
+  custom:
+    # Add custom dotenv includes
+    dotenv:
+      # Include S3 creds for bucket
+      - AWS_S3_USER_SECRET
+      - AWS_S3_USER_ACCESS_KEY_ID
+      - AWS_S3_BUCKET_NAME
+      
+      # Include pagerduty creds
+      - PAGER_DUTY_API_TOKEN
+      - PAGER_DUTY_SCHEDULE_ID
 
 resources:
  Resources:
