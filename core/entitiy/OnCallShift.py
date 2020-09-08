@@ -1,12 +1,13 @@
 from core.util import DateTimeRange
 from dateutil import parser
+from datetime import datetime
 
 class OnCallShift:
     def __init__(self, id, name, start_date, end_date, is_chargeable = False):
-        self.id=id
-        self.name=name
-        self.start_date=start_date
-        self.end_date=end_date
+        self.id = id
+        self.name = name
+        self.start_date = start_date.isoformat() if isinstance(start_date, datetime) else start_date
+        self.end_date = end_date.isoformat() if isinstance(end_date, datetime) else end_date
         self.is_chargeable = is_chargeable
     
     def with_is_chargeable(self, is_chargeable):
@@ -35,3 +36,14 @@ class OnCallShift:
     def get_time_range(self):
         return DateTimeRange(parser.isoparse(self.start_date), parser.isoparse(self.end_date))
 
+    """
+    Format csv row for other objects
+    """
+    def to_csv_row(self):
+        return [self.name, parser.isoparse(self.start_date).strftime("%d/%m/%Y"), parser.isoparse(self.end_date).strftime("%d/%m/%Y"), parser.isoparse(self.start_date).strftime("%A")]
+    """
+    Processes entity from athena row into standard timestamp format
+    """
+    @classmethod
+    def from_athena_row(cls, row):
+        return cls(*row)

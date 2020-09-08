@@ -13,10 +13,10 @@ def getS3Client():
 
     env = os.getenv("ENV", 'prod') 
     
-    if env == 'prod':
-        config["aws_access_key_id"]=os.getenv("AWS_S3_USER_ACCESS_KEY_ID")
-        config["aws_secret_access_key"]=os.getenv("AWS_S3_USER_SECRET")
-        config["region_name"]=os.getenv("AWS_S3_USER_REGION")
+    if env != 'local':
+        config["aws_access_key_id"]=os.getenv("S3_USER_ACCESS_KEY_ID")
+        config["aws_secret_access_key"]=os.getenv("S3_USER_SECRET")
+        config["region_name"]=os.getenv("S3_USER_REGION")
 
     else:
         # In the event we are in dev mode try to connect to the local instance
@@ -28,5 +28,5 @@ def getS3Client():
 
     return S3Client(
         client,
-        os.getenv("AWS_S3_BUCKET_NAME", "")
+        os.getenv("S3_BUCKET_NAME", "")
     )

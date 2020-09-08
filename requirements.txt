@@ -4,3 +4,7 @@ python-dotenv
 gspread
 python-dateutil
 pytz
+pyopenssl
+PyAthena
+authlib
+requests

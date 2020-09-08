@@ -2,20 +2,45 @@ service: pager-duty-sync
 
 provider:
   name: aws
-  runtime: python3.8
-  stage: ${env:AWS_STAGE}
+  runtime: python3.7
+  stage: ${opt:stage}
   region:  ${env:AWS_REGION}
   profile: ${env:AWS_DEPLOY_PROFILE}
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - ssm:GetParameter
+        - ssm:GetParametersByPath
+        - ssm:GetParameters
+        - ssm:DescribeParameters
+        # @todo restrict scoping on this
+      Resource: "*"
+
+  # Inherit env from parent context
+  environment:
+    ENV: ${opt:stage}
 
 functions:
   exportToS3:
     handler: functions.export_pager_duty_reports_to_s3
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
     events:
-     #- http: POST /sync/s3
+      - http: POST /sync/s3
       - 
         schedule: 
           enabled: true
           rate: cron(0 0 * * ? *)
+    memorySize: 512
+    timeout: 60
+
+  createGoogleSheets:
+    handler: functions.genarate_and_share_google_sheets
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    memorySize: 512
+    timeout: 60
 
 plugins:
   - serverless-offline
@@ -24,10 +49,7 @@ plugins:
   - serverless-python-requirements
   
 package:
-  exclude:
-    - node_modules/**
-    - node_modules
-    - .env
+  exclude: ${self:custom.excludeFromStage.${opt:stage}, self.custom.excludeFromStage.default}
 
 custom:
   s3:
@@ -40,21 +62,58 @@ custom:
     logging: false
     include:
       # Include S3 creds for bucket
-      - AWS_S3_USER_SECRET
-      - AWS_S3_USER_ACCESS_KEY_ID
-      - AWS_S3_BUCKET_NAME
-      - AWS_S3_USER_REGION
+      #- S3_USER_SECRET (loaded from ssm)
+      - S3_USER_ACCESS_KEY_ID
+      - S3_BUCKET_NAME
+      - S3_USER_REGION
       
       # Include pagerduty creds
-      - PAGER_DUTY_API_TOKEN
+      #- PAGER_DUTY_API_TOKEN #(Loaded from SSM)
       - PAGER_DUTY_SCHEDULE_ID
+
+      # Include athena deets
+      #- ATHENA_USER_SECRET (Loaded from ssm)
+      - ATHENA_USER_ID
+      - ATHENA_DB_NAME
+      - ATHENA_BUCKET_NAME
+      - ATHENA_REGION
+      - ATHENA_DB_TABLE
+
+      #Gspread
+      - GOOGLE_SHEETS_SERVICE_USER_ACCOUNT_INFO
   
   pythonRequirements:
     dockerizePip: true
+    dockerFile: Dockerfile
+    layer: true
+  
+  excludeFromStage:
+    prod: 
+      - .env
+      - node_modules/**
+      - node_modules
+      - s3_bucket_local/**
+    
+    dev: 
+      - .env
+      - node_modules/**
+      - node_modules
+      - s3_bucket_local/**
+    
+    local:
+      - node_modules/**
+      - node_modules
+    
+    default:
+      - .env
+      - node_modules/**
+      - node_modules
+      - s3_bucket_local/**
+
 
 resources:
  Resources:
    NewResource:
      Type: AWS::S3::Bucket
      Properties:
-       BucketName: ${env:AWS_S3_BUCKET_NAME}
+       BucketName: ${env:S3_BUCKET_NAME}
