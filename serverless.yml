@@ -27,13 +27,22 @@ functions:
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     events:
-      - http: POST /sync/s3
+      #- http: POST /sync/s3
       - 
         schedule: 
           enabled: true
           rate: cron(0 0 * * ? *)
     memorySize: 512
     timeout: 60
+
+  slackEventHandler:
+    handler: functions.handle_slack_event
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    memorySize: 512
+    timeout: 60
+    events:
+      - http: POST /handle/slack
 
   createGoogleSheets:
     handler: functions.genarate_and_share_google_sheets
@@ -80,7 +89,7 @@ custom:
       - ATHENA_DB_TABLE
 
       #Gspread
-      - GOOGLE_SHEETS_SERVICE_USER_ACCOUNT_INFO
+      #- GOOGLE_SHEETS_SERVICE_USER_ACCOUNT_INFO
   
   pythonRequirements:
     dockerizePip: true
