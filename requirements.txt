@@ -8,3 +8,4 @@ pyopenssl
 PyAthena
 authlib
 requests
+slackclient

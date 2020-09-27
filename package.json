@@ -1,11 +1,14 @@
 {
   "dependencies": {},
   "devDependencies": {
+    "install": "^0.13.0",
     "serverless": "^1.67.0",
     "serverless-dotenv-plugin": "^2.3.2",
     "serverless-offline": "^6.1.2",
+    "serverless-pseudo-parameters": "^2.5.0",
+    "serverless-python-requirements": "^5.1.0",
     "serverless-s3-local": "^0.5.4",
-    "install": "^0.13.0",
-    "serverless-python-requirements": "^5.1.0"
+    "serverless-step-functions": "^2.26.0",
+    "serverless-step-functions-offline": "^2.1.4"
   }
 }

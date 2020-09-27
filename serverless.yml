@@ -3,9 +3,19 @@ service: pager-duty-sync
 provider:
   name: aws
   runtime: python3.7
-  stage: ${opt:stage}
+  stage: ${opt:stage, 'dev'}
   region:  ${env:AWS_REGION}
   profile: ${env:AWS_DEPLOY_PROFILE}
+
+  # Free usage tier (Change this if you wanna spend money)
+  usagePlan:
+    quota:
+      limit: 5000
+      offset: 2
+      period: MONTH
+    throttle:
+      burstLimit: 200
+      rateLimit: 100
 
   iamRoleStatements:
     - Effect: Allow
@@ -19,11 +29,16 @@ provider:
 
   # Inherit env from parent context
   environment:
-    ENV: ${opt:stage}
+    ENV: ${opt:stage, 'dev'}
 
 functions:
+  authSlack:
+    handler: core/auth_slack_event.auth_slack_event
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+
   exportToS3:
-    handler: functions.export_pager_duty_reports_to_s3
+    handler: core/export_pager_duty_reports_to_s3.export_pager_duty_reports_to_s3
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     events:
@@ -36,16 +51,16 @@ functions:
     timeout: 60
 
   slackEventHandler:
-    handler: functions.handle_slack_event
+    handler: core/handle_slack_event.handle_slack_event
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     memorySize: 512
     timeout: 60
-    events:
-      - http: POST /handle/slack
+    #events:
+    #  - http: POST /handle/slack
 
   createGoogleSheets:
-    handler: functions.genarate_and_share_google_sheets
+    handler: core/generate_and_share_google_sheets.core/generate_and_share_google_sheets
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     memorySize: 512
@@ -56,15 +71,17 @@ plugins:
   - serverless-s3-local
   - serverless-dotenv-plugin
   - serverless-python-requirements
-  
+  - serverless-step-functions
+  - serverless-pseudo-parameters
+  - serverless-step-functions-offline
+
 package:
-  exclude: ${self:custom.excludeFromStage.${opt:stage}, self.custom.excludeFromStage.default}
+  exclude: ${self:custom.excludeFromStage.${opt:stage, 'dev'}, self.custom.excludeFromStage.default}
 
 custom:
   s3:
     port: ${env:LOCAL_S3_PORT}
     directory: ${env:LOCAL_S3_DIR}
-  
 
   # Add custom dotenv includes
   dotenv:
@@ -90,6 +107,11 @@ custom:
 
       #Gspread
       #- GOOGLE_SHEETS_SERVICE_USER_ACCOUNT_INFO
+
+      #Slack
+      #- "ATHENA_USER_SECRET",
+      #- "GOOGLE_SHEETS_SERVICE_USER_ACCOUNT_INFO"
+      - SLACK_DEBUG_EMAIL
   
   pythonRequirements:
     dockerizePip: true
@@ -119,6 +141,62 @@ custom:
       - node_modules
       - s3_bucket_local/**
 
+  stepFunctionsOffline:
+    AuthSlack: authSlack
+    ProcessSlackEvent: slackEventHandler
+
+stepFunctions:
+  stateMachines:
+    slackResolutionChain:
+      events:
+        - http:
+            path:  handle/slack
+            method: POST
+            request:
+              template: lambda_proxy
+            response:
+              headers:
+                Content-Type: "'application/json'"
+                X-Slack-No-Retry: "'1'"
+              template:
+                application/json: |
+                  {
+                    "status": 200,
+                    "info": "OK"
+                  }
+      definition:
+        Comment: "State machine that auths then returns a 200 to satitisfy the slack events api"
+        StartAt: AuthSlack
+        States:
+          AuthSlack:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-authSlack"
+            Next: IsAuthValidState
+          
+          IsAuthValidState:
+            Type: Choice
+            Choices:
+              - Variable: "$.EVENT_TYPE"
+                StringEquals: "AUTH_PASSED"
+                Next: ProcessSlackEvent
+              - Variable: "$.EVENT_TYPE"
+                StringEquals: "AUTH_FAILED"
+                Next: FailedAuthState
+            Default: UnknownAuthState
+          
+          FailedAuthState:
+            Type: Fail
+            Cause: "Failed to auth!"
+
+          UnknownAuthState:
+            Type: Fail
+            Cause: "Invalid response from auth lambda!"
+
+          ProcessSlackEvent:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-slackEventHandler"
+            InputPath: '$.PAYLOAD.slack_event'
+            End: true
 
 resources:
  Resources:

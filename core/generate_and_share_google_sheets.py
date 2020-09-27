@@ -5,6 +5,7 @@ from core.writer import GoogleSheetsPagerDutyWriter
 from core.service import PagerDutyService, GoogleSheetsService
 from core.logging import get_logger
 from core.response import get_response
+from core.slack import auth_slack, get_events_director, handle_slack_error
 import slack
 from datetime import datetime
 
@@ -18,8 +19,8 @@ def genarate_and_share_google_sheets(event, context):
     
     date_from = "2020-01-01"
     date_to = "2020-10-01"
-    
-    share_emails = event.get('emails')
+    share_emails = ["landgraabiv@gmail.com"]
+
     
     logger.info("Beginning google sheet creation for timesheets from {0} to {1} for users:{2}".format(date_from, date_to, ','.join(share_emails)))
     
@@ -40,6 +41,6 @@ def genarate_and_share_google_sheets(event, context):
     logger.info("Generated google sheet: '{0}' and shared with '{1}'".format(pager_duty_title, "', '".join(share_emails)))
     
     return get_response(data={
-        "success": True,
+        "success": true,
         "message": "Generated google sheet: '{0}' and shared with {1} users".format(pager_duty_title, len(share_emails))
     })
