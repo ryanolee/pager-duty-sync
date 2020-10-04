@@ -32,6 +32,11 @@ provider:
     ENV: ${opt:stage, 'dev'}
 
 functions:
+  sendMessageToSlackChannel:
+    handler: core/send_message_to_channel.send_message_to_channel 
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+
   authSlack:
     handler: core/auth_slack_event.auth_slack_event
     layers:
@@ -60,7 +65,7 @@ functions:
     #  - http: POST /handle/slack
 
   createGoogleSheets:
-    handler: core/generate_and_share_google_sheets.core/generate_and_share_google_sheets
+    handler: core/generate_and_share_google_sheets.generate_and_share_google_sheets
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     memorySize: 512
@@ -144,10 +149,13 @@ custom:
   stepFunctionsOffline:
     AuthSlack: authSlack
     ProcessSlackEvent: slackEventHandler
+    FillInTimesheets: createGoogleSheets
+    SendMessageToSlackChannel: sendMessageToSlackChannel
 
 stepFunctions:
   stateMachines:
     slackResolutionChain:
+      type: EXPRESS
       events:
         - http:
             path:  handle/slack
@@ -195,8 +203,46 @@ stepFunctions:
           ProcessSlackEvent:
             Type: Task
             Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-slackEventHandler"
-            InputPath: '$.PAYLOAD.slack_event'
-            End: true
+            # @todo implement input path support into task types for local invokations
+            #InputPath: '$.PAYLOAD.slack_event'
+            Next: SlackDirectProcessEvent
+          
+          SlackDirectProcessEvent:
+            Type: Choice
+            Choices:
+              - Variable: "$.EVENT_TYPE"
+                StringEquals: "FILL_IN_TIMESHEETS"
+                Next: FillInTimesheets
+            Default: UnknownEventType
+
+          FillInTimesheets:
+            Type: Task
+            Resources: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-createGoogleSheets"
+            # @todo implement input path support into task types for local invokations
+            #InputPath: '$.PAYLOAD'
+            Next: ShouldSendMessageToChannel
+            
+          
+          UnknownEventType:
+            Type: Fail
+            Cause: "Unknown event type"
+          
+          ShouldSendMessageToChannel:
+            Type: Choice
+            Choices:
+              - Variable: "$.EVENT_TYPE"
+                StringEquals: "SAY_TO_CHANNEL"
+                Next: SendMessageToSlackChannel
+            Default: FinishProcess
+
+          SendMessageToSlackChannel:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-sendMessageToSlackChannel"
+            Next: FinishProcess
+          
+          FinishProcess:
+            Type: Succeed
+
 
 resources:
  Resources:

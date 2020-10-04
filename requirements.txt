@@ -1,11 +1,12 @@
 #Pager duty libs
+authlib
 boto3
+dateparser
 python-dotenv
 gspread
 python-dateutil
 pytz
 pyopenssl
 PyAthena
-authlib
 requests
 slackclient

@@ -9,6 +9,6 @@
     "serverless-python-requirements": "^5.1.0",
     "serverless-s3-local": "^0.5.4",
     "serverless-step-functions": "^2.26.0",
-    "serverless-step-functions-offline": "^2.1.4"
+    "serverless-step-functions-offline": "git+ssh://git@github.com/ryanolee/serverless-step-functions-offline.git#dev-AddPythonRuntime"
   }
 }

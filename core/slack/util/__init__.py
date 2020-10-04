@@ -1,2 +1,2 @@
-from .text_utils import get_all_users_from_blocks
+from .text_utils import get_all_users_from_blocks, get_date_range_from_string
 from .user_utils import get_all_user_profiles

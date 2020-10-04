@@ -18,9 +18,11 @@ class EventDirector():
     """
     def handle_event(self, client, event_payload):
         logger = get_logger()
+
+        event_type = event_payload.get('type', 'unknown')
         for event in self.events:
-            if event['matcher'].type_match(event_payload['type']) and event['matcher'].match(event_payload):
-                logger.info(f"Directing recieved {event_payload['type']} with a payload of {event_payload} to {event['callback']}")
+            if event['matcher'].type_match(event_type) and event['matcher'].match(event_payload):
+                logger.info(f"Directing recieved {event_type} with a payload of {event_payload} to {event['callback']}")
                 return event['callback'](client, event_payload)
     
     """

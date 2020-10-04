@@ -19,7 +19,6 @@ def in_dot_env_context(orig_func):
             load_dotenv(env_file_path)
         else:
             logger.info("No .env file found skipping" + env_file_path)
-
         return orig_func(*args, **kwargs)
     return load_dotenv_then_proxy_orig
 

@@ -27,4 +27,4 @@ __pycache__
 node_modules
 s3_bucket_local
 
-test.py
+event_payloads\*

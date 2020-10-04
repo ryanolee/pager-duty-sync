@@ -5,7 +5,7 @@ from core.writer import GoogleSheetsPagerDutyWriter
 from core.service import PagerDutyService, GoogleSheetsService
 from core.logging import get_logger
 from core.response import get_response
-from core.slack import auth_slack, get_events_director, handle_slack_error
+from core.slack import auth_slack, get_events_director, slack_error_wrapper
 import slack
 from datetime import datetime
 
@@ -13,13 +13,17 @@ from datetime import datetime
 @enrich_env_with_ssm_secrets([
     'SLACK_SIGNING_SECRET'
 ])
-def handle_slack_event(event, context):
+@slack_error_wrapper
+def auth_slack_event(event, context):
     logger = get_logger()
-    slack_signature = event.get('headers').get('X-Slack-Signature', '')
-    slack_timestamp = event.get('headers').get('X-Slack-Request-Timestamp', '')
+
+    if event == None:
+        logger.info('No request body given. Aborting request')
+        return get_response("AUTH_FAILED", {'reason': 'Bad Request'})
+
+    slack_signature = event.get('headers', {}).get('X-Slack-Signature', '')
+    slack_timestamp = event.get('headers', {}).get('X-Slack-Request-Timestamp', '')
     body = event.get('body', '{}')
-    
-    logger.info('Supplied slack sginture:')
     
     is_slack_auth_valid = auth_slack(os.getenv("SLACK_SIGNING_SECRET"), slack_timestamp, slack_signature, body)
     
@@ -33,10 +37,6 @@ def handle_slack_event(event, context):
         logger.warn("Json payload: load invalid" + str(body))
         return get_response("AUTH_FAILED", {'reason': 'Payload invalid'})
     
+    #logger.info('Given slack payload: ' + str(slack_event))
     
-    event_type = slack_event.get('type', 'unknown')
-    
-    logger.info('Given slack payload: ' + str(slack_event))
-    
-  
     return get_response("AUTH_PASSED", {'slack_event': slack_event})

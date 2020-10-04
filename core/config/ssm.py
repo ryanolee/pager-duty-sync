@@ -8,7 +8,7 @@ Loads env vars given by name
 """
 def enrich_env(env_vars):
     logging = get_logger()
-    
+
     if os.getenv("ENV", "prod") == "local":
         logging.info("Skipping SSM enrichment. ENV loaded from dev")
         return
