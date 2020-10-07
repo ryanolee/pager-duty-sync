@@ -217,12 +217,11 @@ stepFunctions:
 
           FillInTimesheets:
             Type: Task
-            Resources: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-createGoogleSheets"
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-createGoogleSheets"
             # @todo implement input path support into task types for local invokations
             #InputPath: '$.PAYLOAD'
             Next: ShouldSendMessageToChannel
             
-          
           UnknownEventType:
             Type: Fail
             Cause: "Unknown event type"

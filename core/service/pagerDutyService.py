@@ -14,16 +14,28 @@ class PagerDutyService():
     def get_schedule_days_into_the_past(self, schedule_id, days):
         until = datetime.now(timezone.utc)
         since = until - timedelta(days=days)
+        return self.get_time_range(schedule_id, since, until)
 
-        result = self.client.get_schedule(schedule_id, since.isoformat(), until.isoformat())
+    def get_time_range(self, schedule_id, since, until):
+        more_results = True
+        results = []
+        limit = 100
+        offset = 0
 
-        return [OnCallShift(
-            scheduleEntry["id"],
-            scheduleEntry["user"]["summary"], # Name in this context
-            scheduleEntry["start"],
-            scheduleEntry["end"]
-        ) for scheduleEntry in result["schedule"]["final_schedule"]["rendered_schedule_entries"]]
-    
+        while more_results:
+            result = self.client.get_schedule(schedule_id, since.isoformat(), until.isoformat())
+
+            results += [OnCallShift(
+                scheduleEntry["id"],
+                scheduleEntry["user"]["summary"], # Name in this context
+                scheduleEntry["start"],
+                scheduleEntry["end"]
+            ) for scheduleEntry in result["schedule"]["final_schedule"]["rendered_schedule_entries"]]
+
+            offset += limit
+            more_results = result['more']
+        return results
+        
     """
     Works out if a on call shift is infact chargeable (this will only be the case when the shift is not during work hours)
     """

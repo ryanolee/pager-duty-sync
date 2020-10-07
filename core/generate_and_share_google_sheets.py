@@ -6,8 +6,7 @@ from core.writer import GoogleSheetsPagerDutyWriter
 from core.service import PagerDutyService, GoogleSheetsService
 from core.logging import get_logger
 from core.response import get_response
-from core.slack import auth_slack, get_events_director, slack_error_wrapper
-import slack
+from core.slack import slack_error_wrapper
 from datetime import datetime
 
 @in_dot_env_context
@@ -19,7 +18,6 @@ from datetime import datetime
 @slack_error_wrapper
 def generate_and_share_google_sheets(event, context):
     logger = get_logger()
-    
 
     # Get payload from even
     payload = event.get("PAYLOAD")
@@ -43,7 +41,6 @@ def generate_and_share_google_sheets(event, context):
             "channel": slack_channel
         })
     
-
     if time_difference <= 0:
         return get_response('SAY_TO_CHANNEL',{
             "message": f"Sorry I am a bit confused by when I need to export. Blame ryan and his rubbish NLP parsing :stinks:",

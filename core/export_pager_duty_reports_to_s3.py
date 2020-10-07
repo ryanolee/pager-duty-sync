@@ -1,4 +1,5 @@
-import os, json
+import os, json, slack
+from dateutil import parser
 from core.client import PagerDutyClient, getS3Client, get_athena_client
 from core.config import in_dot_env_context, enrich_env_with_ssm_secrets
 from core.writer import GoogleSheetsPagerDutyWriter
@@ -6,7 +7,6 @@ from core.service import PagerDutyService, GoogleSheetsService
 from core.logging import get_logger
 from core.response import get_response
 from core.slack import auth_slack, get_events_director, handle_slack_error
-import slack
 from datetime import datetime
 
 @in_dot_env_context
@@ -16,13 +16,22 @@ from datetime import datetime
     "S3_USER_SECRET"
 ])
 def export_pager_duty_reports_to_s3(event, context):
-    
-    return {}
-    
+    payload = event.get("PAYLOAD", {})
+    since = payload.get("since", None)
+    until = payload.get("until", None)
+
+    if since == None:
+        return get_response("BAD_STATE", {
+            "message": "Could not find when to start from"
+        })
+
+    since_dt = parser.isoparse(since)
+    until_dt = parser.isoparse(until) if until != None else datetime.now()
+
     # Load logger 
     logger = get_logger()
 
-    logger.info("Beginning sync process between S3 and ")
+    logger.info(f"Beginning sync process between pager duty and S3 from {since_dt.strftime('%b/%d/%Y')} to {until_dt.strftime('%b/%d/%Y')}")
     
     # Load client
     client = PagerDutyClient( os.getenv("PAGER_DUTY_API_TOKEN") )
@@ -48,6 +57,6 @@ def export_pager_duty_reports_to_s3(event, context):
 
     # Use this code if you don't use the http event with the LAMBDA-PROXY
     # integration
-    return get_response(data={
-        "exported_shift_ids": on_call_shift_ids
+    return get_response("SAY_TO_CHANNEL", {
+        "message": f"Exported {}"
     })
