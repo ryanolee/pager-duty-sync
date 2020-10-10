@@ -1,0 +1,1 @@
+from .admin import must_be_admin

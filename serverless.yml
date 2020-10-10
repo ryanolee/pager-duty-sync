@@ -150,6 +150,7 @@ custom:
     AuthSlack: authSlack
     ProcessSlackEvent: slackEventHandler
     FillInTimesheets: createGoogleSheets
+    ExportToS3: exportToS3
     SendMessageToSlackChannel: sendMessageToSlackChannel
 
 stepFunctions:
@@ -206,18 +207,28 @@ stepFunctions:
             # @todo implement input path support into task types for local invokations
             #InputPath: '$.PAYLOAD.slack_event'
             Next: SlackDirectProcessEvent
-          
+       
           SlackDirectProcessEvent:
             Type: Choice
             Choices:
               - Variable: "$.EVENT_TYPE"
                 StringEquals: "FILL_IN_TIMESHEETS"
                 Next: FillInTimesheets
+              - Variable: "$.EVENT_TYPE"
+                StringEquals: "EXPORT_TO_S3"
+                Next: ExportToS3
             Default: UnknownEventType
 
           FillInTimesheets:
             Type: Task
             Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-createGoogleSheets"
+            # @todo implement input path support into task types for local invokations
+            #InputPath: '$.PAYLOAD'
+            Next: ShouldSendMessageToChannel
+
+          ExportToS3:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-exportToS3"
             # @todo implement input path support into task types for local invokations
             #InputPath: '$.PAYLOAD'
             Next: ShouldSendMessageToChannel

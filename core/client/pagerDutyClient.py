@@ -6,7 +6,7 @@ class PagerDutyClient():
         self.api_key = api_key
 
     @handle_errors_and_return_json
-    def get_schedule(self, id, since, until, offset = 0, limit = 100):
+    def get_schedule(self, id, since, until):
         return requests.get(
             "{base_url}/schedules/{id}".format(
                 base_url=self._get_base_url(),
@@ -15,9 +15,7 @@ class PagerDutyClient():
             headers=self._get_auth_headers(),
             params = {
                 "since": since,
-                "until": until,
-                "offset": offset,
-                "limit": limit
+                "until": until
             }
         )
 

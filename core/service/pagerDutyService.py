@@ -2,6 +2,8 @@ from datetime import timezone, timedelta, datetime
 from core.entitiy import OnCallShift
 from core.client import get_bank_holiday_data
 from core.util import DateTimeRange
+from core.logging import get_logger
+from dateutil import parser
 
 class PagerDutyService():
     def __init__(self, client):
@@ -17,24 +19,18 @@ class PagerDutyService():
         return self.get_time_range(schedule_id, since, until)
 
     def get_time_range(self, schedule_id, since, until):
-        more_results = True
-        results = []
-        limit = 100
-        offset = 0
+        # Pager duty API seemingly accepts any time range so no need to exaust API ¯\_(ツ)_/¯
+        result = self.client.get_schedule(schedule_id, since.isoformat(), until.isoformat())
 
-        while more_results:
-            result = self.client.get_schedule(schedule_id, since.isoformat(), until.isoformat())
+        # Resolve last schedule entry
+        final_schedule = result["schedule"]["final_schedule"]["rendered_schedule_entries"]
 
-            results += [OnCallShift(
-                scheduleEntry["id"],
-                scheduleEntry["user"]["summary"], # Name in this context
-                scheduleEntry["start"],
-                scheduleEntry["end"]
-            ) for scheduleEntry in result["schedule"]["final_schedule"]["rendered_schedule_entries"]]
-
-            offset += limit
-            more_results = result['more']
-        return results
+        return [OnCallShift(
+            scheduleEntry["id"],
+            scheduleEntry["user"]["summary"], # Name in this context
+            scheduleEntry["start"],
+            scheduleEntry["end"]
+        ) for scheduleEntry in final_schedule]
         
     """
     Works out if a on call shift is infact chargeable (this will only be the case when the shift is not during work hours)

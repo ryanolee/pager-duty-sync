@@ -1,3 +1,5 @@
+import os
+
 def get_all_user_profiles(client, user_ids, remove_bots = True):
     profile_data = {}
 

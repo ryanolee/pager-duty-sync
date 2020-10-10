@@ -9,6 +9,9 @@ class OnCallShift:
         self.start_date = start_date.isoformat() if isinstance(start_date, datetime) else start_date
         self.end_date = end_date.isoformat() if isinstance(end_date, datetime) else end_date
         self.is_chargeable = is_chargeable
+
+    def get_id(self):
+        return self.id
     
     def with_is_chargeable(self, is_chargeable):
         self.is_chargeable = is_chargeable

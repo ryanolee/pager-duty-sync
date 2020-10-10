@@ -1,19 +1,20 @@
 from .eventDirector import EventDirector
+from core.slack.permission import must_be_admin
 from core.slack.matchers import RegExpMatcher
 from core.slack.util import get_all_users_from_blocks, get_all_user_profiles, get_date_range_from_string
 from core.response import get_response
 from datetime import datetime
-import calendar
+
 
 event_director = EventDirector()
 
 @event_director.on(matcher = RegExpMatcher('app_mention', ['help']))
-def post_help_message_to_channel(client, event):
+def help_message(client, event):
     client.chat_postMessage(channel = event['channel'], blocks = [{
         "type": "section",
         "text": {
             "type": "mrkdwn",
-            "text": f"Hello there <@{event.get('user')}> :wave:!\nThere are many things I can do such as:\n* Fill in you timesheets \n* give you a dank meme :stonks:\n* probably some more stuff when ryan can be botherd to program it!\n To find out more look here[here](https://github.com/ryanolee/pager-duty-sync)!"
+            "text": f"Hello there <@{event.get('user')}> :wave:!\n I am here to help you fill in the pager duty on call time sheet so you don't have to. Just ask me to 'fill in timesheets' for a particular period of time and I will get them over to you :chart_with_upwards_trend:. To find out more look [here](https://github.com/ryanolee/pager-duty-sync)!"
         }
     }])
     
@@ -28,17 +29,6 @@ def fill_in_timesheets(client, event):
     
     # Try to guess the time range from the given string
     dates = get_date_range_from_string(event['text'])
-
-    # If not just give up assume the current month
-    if dates == None:
-        current_date = datetime.now()
-        dates = {
-            "start_date": datetime.today().replace(day=1),
-            "end_date": current_date.replace(day=calendar.monthrange(current_date.year, current_date.month)[1])
-        }
-
-    # Convert dates into iso format (For further processing down the line, especially compatibility with athena)
-    dates = {key: date.strftime("%Y-%m-%d") for (key, date) in dates.items()}
 
     client.chat_postMessage(channel = event['channel'], blocks = [{
         "type": "section",
@@ -56,7 +46,26 @@ def fill_in_timesheets(client, event):
         'channel': event['channel'],
         **dates
     })
-    
+
+@event_director.on(matcher = RegExpMatcher('app_mention', ['sync to']))
+@must_be_admin
+def resync_to_s3(client, event):
+    # Try to guess the time range from the given string
+    dates = get_date_range_from_string(event['text'])
+
+    client.chat_postMessage(channel = event['channel'], blocks = [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": f"Sure! Will resync pager duty records between {dates['start_date']} and {dates['end_date']}!"
+        }
+    }])
+
+    return get_response('EXPORT_TO_S3', {
+        'since': dates['start_date'],
+        'until': dates['end_date'],
+        'channel': event['channel']
+    })
     
     
 def get_events_director():
