@@ -24,6 +24,7 @@ provider:
         - ssm:GetParametersByPath
         - ssm:GetParameters
         - ssm:DescribeParameters
+        - states:StartExecution
         # @todo restrict scoping on this
       Resource: "*"
 
@@ -32,13 +33,19 @@ provider:
     ENV: ${opt:stage, 'dev'}
 
 functions:
-  sendMessageToSlackChannel:
-    handler: core/send_message_to_channel.send_message_to_channel 
-    layers:
-      - {Ref: PythonRequirementsLambdaLayer}
-
+    #Call and auth proxy for accepting chalanges from slack
   authSlack:
     handler: core/auth_slack_event.auth_slack_event
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    environment:
+      STEP_FUNCTION_ARN: ${self:resources.Outputs.StateMachine.Value}
+    
+    events:
+      - http: POST /handle/slack
+
+  sendMessageToSlackChannel:
+    handler: core/send_message_to_channel.send_message_to_channel 
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
 
@@ -117,6 +124,7 @@ custom:
       #- "ATHENA_USER_SECRET",
       #- "GOOGLE_SHEETS_SERVICE_USER_ACCOUNT_INFO"
       - SLACK_DEBUG_EMAIL
+      - SLACK_ADMIN_EMAILS
   
   pythonRequirements:
     dockerizePip: true
@@ -147,7 +155,6 @@ custom:
       - s3_bucket_local/**
 
   stepFunctionsOffline:
-    AuthSlack: authSlack
     ProcessSlackEvent: slackEventHandler
     FillInTimesheets: createGoogleSheets
     ExportToS3: exportToS3
@@ -155,52 +162,18 @@ custom:
 
 stepFunctions:
   stateMachines:
-    slackResolutionChain:
+    SlackResolver:
+      name: SlackResolver
       type: EXPRESS
-      events:
-        - http:
-            path:  handle/slack
-            method: POST
-            request:
-              template: lambda_proxy
-            response:
-              headers:
-                Content-Type: "'application/json'"
-                X-Slack-No-Retry: "'1'"
-              template:
-                application/json: |
-                  {
-                    "status": 200,
-                    "info": "OK"
-                  }
+      #loggingConfig:
+      #  level: ALL
+      #  includeExecutionData: true
+      #  destinations:
+      #    - Fn::GetAtt: [MyLogGroup, Arn]
       definition:
-        Comment: "State machine that auths then returns a 200 to satitisfy the slack events api"
-        StartAt: AuthSlack
+        Comment: "State machine that handles lambda event directions"
+        StartAt: ProcessSlackEvent
         States:
-          AuthSlack:
-            Type: Task
-            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-authSlack"
-            Next: IsAuthValidState
-          
-          IsAuthValidState:
-            Type: Choice
-            Choices:
-              - Variable: "$.EVENT_TYPE"
-                StringEquals: "AUTH_PASSED"
-                Next: ProcessSlackEvent
-              - Variable: "$.EVENT_TYPE"
-                StringEquals: "AUTH_FAILED"
-                Next: FailedAuthState
-            Default: UnknownAuthState
-          
-          FailedAuthState:
-            Type: Fail
-            Cause: "Failed to auth!"
-
-          UnknownAuthState:
-            Type: Fail
-            Cause: "Invalid response from auth lambda!"
-
           ProcessSlackEvent:
             Type: Task
             Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-slackEventHandler"
@@ -255,8 +228,13 @@ stepFunctions:
 
 
 resources:
- Resources:
+  Resources:
    NewResource:
      Type: AWS::S3::Bucket
      Properties:
        BucketName: ${env:S3_BUCKET_NAME}
+  Outputs:
+    StateMachine:
+      Description: Value for the provisioned state machine so we can pass it onto the state machine
+      Value:
+        Ref: SlackResolver

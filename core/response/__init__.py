@@ -1,1 +1,2 @@
 from .response import get_response
+from .lambda_proxy_response import get_lambda_proxy_response
