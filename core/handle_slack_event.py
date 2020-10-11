@@ -13,7 +13,8 @@ from datetime import datetime
 @enrich_env_with_ssm_secrets([
     'SLACK_BOT_OAUTH_TOKEN'
 ])
-@slack_error_wrapper
+# Remove until IM error loop detection is implemented
+#@slack_error_wrapper
 def handle_slack_event(event, context):
     events_director = get_events_director()
 
