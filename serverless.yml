@@ -190,6 +190,12 @@ stepFunctions:
               - Variable: "$.EVENT_TYPE"
                 StringEquals: "EXPORT_TO_S3"
                 Next: ExportToS3
+              - Variable: "$.EVENT_TYPE"
+                StringEquals: "EVENT_DONE"
+                Next: FinishProcess
+              - Variable: "$.EVENT_TYPE"
+                StringEquals: "NO_EVENT_SPECIFIED"
+                Next: FinishProcess
             Default: UnknownEventType
 
           FillInTimesheets:

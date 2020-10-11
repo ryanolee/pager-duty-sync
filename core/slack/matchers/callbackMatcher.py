@@ -8,4 +8,4 @@ class CallbackMatcher(Matcher):
         return self.callback(*args, **kwags)
     
     def __repr__(self):
-        return f"<CallbackMatcher(event_type={self.event_type}, regexes={self.callback})"
+        return f"<CallbackMatcher(event_type={self.event_type}, callback={self.callback})"

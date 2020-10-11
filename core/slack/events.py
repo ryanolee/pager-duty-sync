@@ -1,10 +1,10 @@
+import re
 from .eventDirector import EventDirector
 from core.slack.permission import must_be_admin
-from core.slack.matchers import RegExpMatcher
+from core.slack.matchers import RegExpMatcher, CallbackMatcher, is_app_home_event
 from core.slack.util import get_all_users_from_blocks, get_all_user_profiles, get_date_range_from_string
 from core.response import get_response
 from datetime import datetime
-
 
 event_director = EventDirector()
 
@@ -17,6 +17,8 @@ def help_message(client, event):
             "text": f"Hello there <@{event.get('user')}> :wave:!\n I am here to help you fill in the pager duty on call time sheet so you don't have to. Just ask me to 'fill in timesheets' for a particular period of time and I will get them over to you :chart_with_upwards_trend:. To find out more look [here](https://github.com/ryanolee/pager-duty-sync)!"
         }
     }])
+
+    return get_response('EVENT_DONE')
     
 @event_director.on(matcher = RegExpMatcher('app_mention', ['fill in timesheets']))
 def fill_in_timesheets(client, event):
@@ -66,7 +68,42 @@ def resync_to_s3(client, event):
         'until': dates['end_date'],
         'channel': event['channel']
     })
+
+@event_director.on(matcher = CallbackMatcher('message', is_app_home_event))
+@must_be_admin
+def handle_admin_call(client, event):
+    expression = re.compile("channel:\|(?P<channel>(?:.|\\\|)*)\|\s*message:\|(?P<message>(?:.|\\\|)*)\|")
+    sender = event.get('user', None)
+
+    result = expression.search(event.get('text'))
+
+    if result == None:
+        client.chat_postMessage(channel = sender, blocks = [{
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"Could not find expected response in given text (No message sent)"
+            }
+        }])
     
+    else:
+        client.chat_postMessage(channel = sender, blocks = [{
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"Posting event to channel: {result['channel']} with message: {result['message']}"
+            }
+        }])
+
+        client.chat_postMessage(channel = result['channel'], blocks = [{
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": result['message']
+            }
+        }])
     
+    return get_response('EVENT_DONE')
+
 def get_events_director():
     return event_director
