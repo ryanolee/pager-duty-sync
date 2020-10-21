@@ -22,4 +22,4 @@ class GoogleSheetsService:
         sheet = self.gspread.open(title)
         
         for email in emails:
-            sheet.share(emails, perm_type='user', role='writer', email_message = "This is an auto generated google sheet for pager duty time sheets")
+            sheet.share(email, perm_type='user', role='writer', email_message = "This is an auto generated google sheet for pager duty time sheets")
