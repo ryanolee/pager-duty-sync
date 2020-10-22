@@ -57,7 +57,7 @@ def generate_and_share_google_sheets(event, context):
     logger.info("Found {0} rows to sync to google sheets".format(len(cargeable_on_call_records)))
     
     # Sort timesheet entries
-    sorted(
+    cargeable_on_call_records = sorted(
         cargeable_on_call_records,
         key=lambda sheet_row: cargeable_on_call_records.strptime(parser.isoparse(sheet_row.start_date), '%m/%d/%y %H:%M'), reverse=True
     )
