@@ -42,7 +42,7 @@ class PagerDutyService():
             return True
 
         # In the event a scheduled day starts at the week end it should be chargeable
-        if shift_range.start.weekday() > 5:
+        if shift_range.start.weekday() >= 5:
             return True
 
         #Try to work out if a day is in bank holiday
