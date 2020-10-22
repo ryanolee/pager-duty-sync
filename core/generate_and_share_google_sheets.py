@@ -7,6 +7,7 @@ from core.service import PagerDutyService, GoogleSheetsService
 from core.logging import get_logger
 from core.response import get_response
 from core.slack import slack_error_wrapper
+from dateutil import parser
 from datetime import datetime
 
 @in_dot_env_context
@@ -55,10 +56,17 @@ def generate_and_share_google_sheets(event, context):
     cargeable_on_call_records = athena_client.get_chargeable_on_call_data(date_from, date_to)
     logger.info("Found {0} rows to sync to google sheets".format(len(cargeable_on_call_records)))
     
+    # Sort timesheet entries
+    sorted(
+        cargeable_on_call_records,
+        key=lambda sheet_row: cargeable_on_call_records.strptime(parser.isoparse(sheet_row.start_date), '%m/%d/%y %H:%M'), reverse=True
+    )
+
     now = datetime.now()
     pager_duty_title = "PagerDuty on call timesheet {0} - {1} generated on {2}".format(date_from, date_to, now.strftime("%d/%m/%Y %H:%M:%S"))
     
     google_sheets_creds = json.loads(os.getenv("GOOGLE_SHEETS_SERVICE_USER_ACCOUNT_INFO"))
+    
     service = GoogleSheetsService(google_sheets_creds)
     writer = GoogleSheetsPagerDutyWriter(cargeable_on_call_records)
     
