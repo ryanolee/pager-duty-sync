@@ -59,7 +59,7 @@ def generate_and_share_google_sheets(event, context):
     # Sort timesheet entries
     cargeable_on_call_records = sorted(
         cargeable_on_call_records,
-        key=lambda sheet_row: cargeable_on_call_records.strptime(parser.isoparse(sheet_row.start_date), '%m/%d/%y %H:%M'), reverse=True
+        key=lambda sheet_row: parser.isoparse(sheet_row.start_date)
     )
 
     now = datetime.now()
