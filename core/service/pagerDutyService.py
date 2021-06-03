@@ -3,7 +3,9 @@ from core.entitiy import OnCallShift
 from core.client import get_bank_holiday_data
 from core.util import DateTimeRange
 from core.logging import get_logger
-from dateutil import parser
+from dateutil import parser, rrule
+from itertools import chain
+from dateutil.rrule import rrule, HOURLY
 
 class PagerDutyService():
     def __init__(self, client):
@@ -25,12 +27,38 @@ class PagerDutyService():
         # Resolve last schedule entry
         final_schedule = result["schedule"]["final_schedule"]["rendered_schedule_entries"]
 
+        # Chunk schedule into 12 hour incs in a flat format
+        final_schedule_12h = []
+        for shift in final_schedule:
+            i = 0
+            shift_end = parser.isoparse(shift['end'])
+            for shift_start in rrule(
+                freq=HOURLY,
+                interval=12,
+                dtstart=parser.isoparse(shift['start']),
+                until=shift_end
+            ):
+                # Stop splitting shifts if we are going to be adding time that does not exsist
+                if shift_start == shift_end:
+                    break
+                
+                final_schedule_12h.append({
+                    "id": shift["id"] + ("-{}".format(i) if i != 0 else ""),
+                    "user": shift["user"]["summary"],
+                    "start": shift_start,
+                    "end": shift_start + timedelta(hours=12)
+                })
+
+                print(shift['id'], shift_start, shift_start + timedelta(hours=12))
+
+                i+=1
+
         return [OnCallShift(
             scheduleEntry["id"],
-            scheduleEntry["user"]["summary"], # Name in this context
+            scheduleEntry["user"], # Name in this context
             scheduleEntry["start"],
             scheduleEntry["end"]
-        ) for scheduleEntry in final_schedule]
+        ) for scheduleEntry in final_schedule_12h]
         
     """
     Works out if a on call shift is infact chargeable (this will only be the case when the shift is not during work hours)
