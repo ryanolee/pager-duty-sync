@@ -4,10 +4,10 @@
     "install": "^0.13.0",
     "serverless": "^1.83.0",
     "serverless-dotenv-plugin": "^2.3.2",
-    "serverless-offline": "^6.1.2",
+    "serverless-offline": "^12.0.4",
     "serverless-pseudo-parameters": "^2.5.0",
     "serverless-python-requirements": "^5.1.0",
-    "serverless-s3-local": "^0.5.4",
+    "serverless-s3-local": "^0.7.1",
     "serverless-step-functions": "^2.26.0",
     "serverless-step-functions-offline": "git+ssh://git@github.com/ryanolee/serverless-step-functions-offline.git#dev-AddPythonRuntime"
   }
